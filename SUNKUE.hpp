@@ -87,11 +87,11 @@ namespace MY_NAME_SPACE {
 
 }
 
-// OPTIMAIZE
+// OPTIMAIZE benchmark_nessasary
 namespace MY_NAME_SPACE {
 	using namespace std;
 
-	// avoid conditional branch miss
+	// avoid conditional branch miss // pipeline_stall
 	template<integral _Ty> __forceinline constexpr _Ty abs(const _Ty x) noexcept
 	{
 		const _Ty y{ x >> (TypeInfo<_Ty>::bits - 1) }; /* >> = copy MSB // positive=>0 negative =>-1 */
@@ -103,7 +103,6 @@ namespace MY_NAME_SPACE {
 namespace MY_NAME_SPACE {
 	using namespace std;
 
-	
 
 	// 컨테이너 [b,e) macro
 #define ALLOF(cont)(std::begin(cont)),(std::end(cont))
