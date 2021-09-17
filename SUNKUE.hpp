@@ -27,7 +27,7 @@ using int64 = int64_t;
 using uint8 = uint8_t;
 using uint16 = uint16_t;
 using uint32 = uint32_t;
-using uint64 = uint64_t;	  
+using uint64 = uint64_t;
 //-----------------------------------
 
 #define MY_NAME_SPACE SUNKUE
@@ -122,7 +122,7 @@ namespace MY_NAME_SPACE {
 		else return to_string(arg);
 	}
 
-	
+
 	// 람다식 오버로딩 묶음생성. visit, varriant 함께 사용하면 좋음
 	template<class... Ts> struct overloaded : Ts...{
 		using Ts::operator()...;
@@ -133,7 +133,7 @@ namespace MY_NAME_SPACE {
 		if (t.joinable())t.join();
 	}
 
-// length_of_array
+	// length_of_array
 #define sizeof_array(t) sizeof(t) / sizeof(t[0])
 
 	// [m,m)
@@ -143,9 +143,14 @@ namespace MY_NAME_SPACE {
 		return (_min_inc <= _Value) && (_Value < _max_noinc);
 	}
 
-	
 
+	template<class Lambda, int = (Lambda{}(), 0) >
+	constexpr bool _is_constexpr(Lambda) { return true; }
+	constexpr bool _is_constexpr(...) { return false; }
 	
+// 함수 반환값 컴파일 타임인지 확인
+#define is_constexpr(Ret_val) _is_constexpr([]() {return Ret_val; })
+
 }
 
 
