@@ -15,6 +15,8 @@
 #include <thread>
 #include <any>
 #include <random>
+#include <thread>
+#include <chrono>
 
 //-----types-------------------------
 using BYTE = uint8_t;
@@ -28,6 +30,9 @@ using uint8 = uint8_t;
 using uint16 = uint16_t;
 using uint32 = uint32_t;
 using uint64 = uint64_t;
+//-----------------------------------
+#undef max
+#undef min
 //-----------------------------------
 
 #define MY_NAME_SPACE SUNKUE
@@ -46,17 +51,24 @@ namespace MY_NAME_SPACE
 	using namespace std::literals::string_view_literals;
 
 	namespace timer {
-		static clk::time_point StopWatch;
+		class TIMER {
+		public:
+			static TIMER& instance() {
+				static TIMER instance_;
+				return instance_;
+			}
 
-		__forceinline void start() {
-			StopWatch = clk::now();
-		}
+			void start() noexcept {
+				_StopWatch = clk::now();
+			}
 
-		__forceinline void end(const std::string_view mess = ""sv)
-		{
-			auto t = clk::now();
-			std::cout << mess << " : " << duration_cast<milliseconds>(t - StopWatch) << '\n';
-		}
+			void end(std::string_view mess = ""sv, std::ostream& os = std::cout) {
+				auto t = clk::now();
+				os << mess << " : " << duration_cast<milliseconds>(t - _StopWatch) << std::endl;
+			}
+		private:
+			clk::time_point _StopWatch;
+		};
 	}
 }
 
@@ -91,12 +103,61 @@ namespace MY_NAME_SPACE {
 namespace MY_NAME_SPACE {
 	using namespace std;
 
-	// avoid conditional branch miss // pipeline_stall
-	template<integral _Ty> __forceinline constexpr _Ty abs(const _Ty x) noexcept
-	{
-		const _Ty y{ x >> (TypeInfo<_Ty>::bits - 1) }; /* >> = copy MSB // positive=>0 negative =>-1 */
-		return (x ^ y) - y;
+	namespace optimize {
+		// branchless
+		template<integral _Ty> inline constexpr _Ty abs(const _Ty x) noexcept {
+			const _Ty y{ x >> (TypeInfo<_Ty>::bits - 1) }; /* >> = copy MSB // positive=>0 negative =>-1 */
+			return (x ^ y) - y;
+		}
+
+		// branchless 
+		inline constexpr char toupper_alphabets(char c) noexcept {
+			return c -= 32 * ('a' <= c && c <= 'z');
+		}
+
+		// branchless 
+		inline constexpr char tolower_alphabets(char c) noexcept {
+			return c += 32 * ('A' <= c && c <= 'Z');
+		}
 	}
+}
+
+//	compile_time
+namespace MY_NAME_SPACE {
+	template<class Lambda, int = (Lambda{}(), 0) >
+	constexpr bool _is_constexpr(Lambda) { return true; }
+	constexpr bool _is_constexpr(...) { return false; }
+
+	// 함수 반환값 컴파일 타임인지 확인
+#define is_constexpr(Ret_val) _is_constexpr([]() {return Ret_val; })
+}
+
+//	Thread
+namespace MY_NAME_SPACE {
+	class ThreadRAII {
+	public:
+		enum class DtorAction { join, detach };
+
+		ThreadRAII(std::thread&& t, DtorAction a) :m_action{ a }, m_thread(std::move(t)){}
+		~ThreadRAII()
+		{
+			if (m_thread.joinable()) {
+				if (m_action == DtorAction::join) m_thread.join();
+				else m_thread.detach();
+			}
+		}
+
+		ThreadRAII(ThreadRAII&&) = default;
+		ThreadRAII& operator=(ThreadRAII&&) = default;
+
+		std::thread& get() { return m_thread; }
+
+	private:
+		DtorAction m_action;
+		std::thread m_thread;
+	};
+
+
 }
 
 //	UTIL
@@ -129,27 +190,13 @@ namespace MY_NAME_SPACE {
 	};
 	template<class... Ts>overloaded(Ts...)->overloaded<Ts...>;
 
-	__forceinline void checked_join(std::thread& t) {
+	inline void checked_join(std::thread& t) {
 		if (t.joinable())t.join();
 	}
 
 	// length_of_array
 #define sizeof_array(t) sizeof(t) / sizeof(t[0])
 
-	// [m,m)
-	template<integral T, integral _T1, integral _T2>
-	__forceinline constexpr bool in_range(const T _Value, const _T1 _min_inc, const _T2 _max_noinc) noexcept
-	{
-		return (_min_inc <= _Value) && (_Value < _max_noinc);
-	}
-
-
-	template<class Lambda, int = (Lambda{}(), 0) >
-	constexpr bool _is_constexpr(Lambda) { return true; }
-	constexpr bool _is_constexpr(...) { return false; }
-	
-// 함수 반환값 컴파일 타임인지 확인
-#define is_constexpr(Ret_val) _is_constexpr([]() {return Ret_val; })
 
 }
 
