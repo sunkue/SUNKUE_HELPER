@@ -75,8 +75,8 @@ namespace MY_NAME_SPACE
 //	RANDOM
 namespace MY_NAME_SPACE
 {
-	static std::random_device rd;			// hardware non-d random
-	static std::default_random_engine dre{ rd() };		// with seed, d random
+	static std::random_device rd;						
+	static std::default_random_engine dre{ rd() };	// u(dre)
 }
 
 //	TYPE_INFO
