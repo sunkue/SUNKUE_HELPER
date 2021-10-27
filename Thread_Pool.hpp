@@ -25,11 +25,11 @@ namespace THREAD_POOL {
 
 
 	private:
-		size_t num_threads_;
-		vector<thread> worker_threads_;
-		queue<function<void()>> jobs_;
-		condition_variable cv_job_q_;
-		mutex m_job_q_;
+		size_t _num_threads;
+		vector<thread> _worker_threads;
+		queue<function<void()>> _jobs;
+		condition_variable _cv_job_q;
+		mutex _m_job_q;
 
 		bool stop_all = false;
 
@@ -45,26 +45,26 @@ namespace THREAD_POOL {
 	}
 
 	Thread_Pool::Thread_Pool(size_t num_threads)
-		: num_threads_{ num_threads }
+		: _num_threads{ num_threads }
 	{
-		worker_threads_.reserve(num_threads_);
-		for (size_t i = 0; i < num_threads_; i++) {
-			worker_threads_.emplace_back([this]() { this->WorkerThread(); });
+		_worker_threads.reserve(_num_threads);
+		for (size_t i = 0; i < _num_threads; i++) {
+			_worker_threads.emplace_back([this]() { this->WorkerThread(); });
 		}
 	}
 
 	void Thread_Pool::WorkerThread()
 	{
 		do {
-			unique_lock<mutex> lock(m_job_q_);
-			cv_job_q_.wait(lock, [this]() { return !this->jobs_.empty() || stop_all; });
+			unique_lock<mutex> lock(_m_job_q);
+			_cv_job_q.wait(lock, [this]() { return !this->_jobs.empty() || stop_all; });
 
-			if (stop_all && this->jobs_.empty()) {
+			if (stop_all && this->_jobs.empty()) {
 				return;
 			}
 
-			function<void()> job = move(jobs_.front());
-			jobs_.pop();
+			function<void()> job = move(_jobs.front());
+			_jobs.pop();
 			lock.unlock();
 
 			job();
@@ -74,9 +74,9 @@ namespace THREAD_POOL {
 	Thread_Pool::~Thread_Pool()
 	{
 		stop_all = true;
-		cv_job_q_.notify_all();
+		_cv_job_q.notify_all();
 
-		for (auto& t : worker_threads_) {
+		for (auto& t : _worker_threads) {
 			t.join();
 		}
 	}
@@ -96,11 +96,11 @@ namespace THREAD_POOL {
 
 		future<return_type> job_result_future = job->get_future();
 		{
-			scoped_lock<mutex> lock(m_job_q_);
-			jobs_.push([job]() { (*job)(); });
+			scoped_lock<mutex> lock(_m_job_q);
+			_jobs.push([job]() { (*job)(); });
 		}
 
-		cv_job_q_.notify_one();
+		_cv_job_q.notify_one();
 		return job_result_future;
 	}
 }

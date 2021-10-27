@@ -18,22 +18,7 @@
 #include <thread>
 #include <chrono>
 
-//-----types-------------------------
-using BYTE = uint8_t;
 
-using int8 = int8_t;
-using int16 = int16_t;
-using int32 = int32_t;
-using int64 = int64_t;
-
-using uint8 = uint8_t;
-using uint16 = uint16_t;
-using uint32 = uint32_t;
-using uint64 = uint64_t;
-//-----------------------------------
-#undef max
-#undef min
-//-----------------------------------
 
 #define MY_NAME_SPACE SUNKUE
 
@@ -59,15 +44,19 @@ namespace MY_NAME_SPACE
 			}
 
 			void start() noexcept {
-				_StopWatch = clk::now();
+				_stop_watch = clk::now();
 			}
 
 			void end(std::string_view mess = ""sv, std::ostream& os = std::cout) {
 				auto t = clk::now();
-				os << mess << " : " << duration_cast<milliseconds>(t - _StopWatch) << std::endl;
+				_lap = duration_cast<milliseconds>(t - _stop_watch);
+				os << mess << " : " << _lap << std::endl;
 			}
+
+			const milliseconds get_last_lap() const noexcept { return _lap; }
 		private:
-			clk::time_point _StopWatch;
+			clk::time_point _stop_watch;
+			milliseconds _lap{};
 		};
 	}
 }
@@ -75,7 +64,7 @@ namespace MY_NAME_SPACE
 //	RANDOM
 namespace MY_NAME_SPACE
 {
-	static std::random_device rd;						
+	static std::random_device rd;
 	static std::default_random_engine dre{ rd() };	// u(dre)
 }
 
@@ -96,7 +85,9 @@ namespace MY_NAME_SPACE {
 
 		static constexpr size_t bits{ sizeof(_Ty) * 8 };
 	};
-
+	
+	template <class _T>
+	concept primitive_t = is_arithmetic_v<_T> || is_enum_v<_T>;
 }
 
 // OPTIMAIZE benchmark_nessasary
@@ -197,7 +188,31 @@ namespace MY_NAME_SPACE {
 	// length_of_array
 #define sizeof_array(t) sizeof(t) / sizeof(t[0])
 
+	template<unsigned_integral _uint>
+	constexpr inline bool check_overflow_sum(_uint a, _uint b) noexcept
+	{
+		if constexpr (a < numeric_limits<_uint>::max() - b) [[likely]]
+		{
+			return false;
+		}
+		else /* overflowed */
+		{
+			return true;
+		}
+	}
 
+	template<unsigned_integral _uint>
+	constexpr inline bool check_underflow_sub(_uint a, _uint b) noexcept
+	{
+		if constexpr (b < a) [[likely]]
+		{
+			return false;
+		}
+		else /* underflow */
+		{
+			return true;
+		}
+	} 
 }
 
 

@@ -11,7 +11,7 @@ using namespace std;
 #define one_line
 #define NO_MUTEX
 constexpr auto MAX_THREAD_NUM = 8;
-constexpr auto num = 100'000'000;
+constexpr auto num = 50'000'000;
 
 // ------------- 타이머 -------------------
 namespace timer
@@ -93,7 +93,7 @@ private:
 volatile int64_t sum = 0;
 
 #ifdef NO_MUTEX
-Bakery<MAX_THREAD_NUM> m;
+Bakery<12> m;
 #else
 mutex m;
 #endif // NO_MUTEX
@@ -103,7 +103,7 @@ void _work(int num_of_thrs)
 {
 	for (auto i = 0; i < num / num_of_thrs; i++) {
 		scoped_lock lck{ m };
-		sum++;
+		sum+=2;
 	}
 }
 
@@ -119,7 +119,9 @@ int main()
 	cout << fixed;
 	for (auto i = 1; i <= MAX_THREAD_NUM; i *= 2) {
 		sum = 0;
+#ifdef NO_MUTEX
 		m.reset();
+#endif // NO_MUTEX
 		vector<thread> threads; threads.reserve(i);
 		timer::start();
 		for (auto j = 0; j < i; j++)
@@ -127,7 +129,7 @@ int main()
 		for (auto& thr : threads)
 			thr.join();
 		cout << "threads[" << i << "]\tsum[" << sum << "]" << "error[" <<
-			(1.l - (static_cast<long double>(sum) / static_cast<long double>(num))) * 100.l << "%]" << endl;
+			(1.l - (static_cast<long double>(sum) / static_cast<long double>(num*2))) * 100.l << "%]" << endl;
 		timer::end("time spent :: ");
 	}
 	cout << "끝"; int i; cin >> i;
