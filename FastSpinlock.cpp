@@ -1,20 +1,21 @@
-#include <windows.h>
-#include <Mmsystem.h>
-#pragma comment(lib, "winmm.lib")
+#include <chrono>
+#include <thread>
 #include "FastSpinlock.h"
+
+using namespace std::chrono_literals;
 
 void Spinlock::lock()
 {
-	for (int nloops = 0; ; nloops++)
+	while (true)
 	{
-		if (lock_flag_.exchange(1) == 0)
+		if (false == lock_flag_.test_and_set())
 			return;
-	
-		Sleep((DWORD)min(10, nloops));
+
+		std::this_thread::sleep_for(1ms);
 	}
 }
 
 void Spinlock::unlock()
 {
-	lock_flag_.exchange(0);
+	lock_flag_.clear();
 }
